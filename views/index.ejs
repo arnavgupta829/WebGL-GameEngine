@@ -1,0 +1,11 @@
+<html>
+  <body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      socket.emit('msg', 'client side msg');
+    </script>
+    <p>Hello World</p>
+  </body>
+</html>

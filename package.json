@@ -1,0 +1,26 @@
+{
+  "name": "webgl-gameengine",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/arnavgupta829/WebGL-GameEngine#readme",
+  "bugs": {
+    "url": "https://github.com/arnavgupta829/WebGL-GameEngine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arnavgupta829/WebGL-GameEngine.git"
+  },
+  "license": "ISC",
+  "author": "Arnav Gupta",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.11",
+    "socket.io": "^4.8.1"
+  }
+}

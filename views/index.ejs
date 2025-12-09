@@ -1,10 +1,11 @@
 <html>
   <body>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/webrtc.js"></script>
     <script>
-      const socket = io();
-
-      socket.emit('msg', 'client side msg');
+      let webrtc = new WebRTC(createID());
+      webrtc.init();
     </script>
     <p>Hello World</p>
   </body>

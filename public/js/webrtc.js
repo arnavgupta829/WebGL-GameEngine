@@ -17,18 +17,12 @@ class WebRTC {
     this.socket = io();
   }
 
-  init() {
-    console.log("Current user " + this.userId);
+  initConnection() {
+    console.log("[WebRTC] Current user " + this.userId);
 
     this.socket.on('msg', msg => this.handleHandshakeMessages(msg));
 
-    this.socket.emit('msg', JSON.stringify({
-        type: 'initiate',
-        isInitiate: true,
-        id: this.userId,
-        destinationId: "any"
-      }
-    ));
+    this.toSignallingServer("all", "initiate", true);
   }
 
   handleHandshakeMessages(msg) {
@@ -37,119 +31,117 @@ class WebRTC {
     let peerId = jsonParsed.id;
     let destinationId = jsonParsed.destinationId;
 
+    console.log("[WebRTC] Received message from " + peerId + ": " + msg);
+
+    if (!(destinationId === "all" || destinationId === this.userId)) {
+      console.log("[WebRTC] Message not meant for current user. Ignoring...");
+      return;
+    }
+
     switch(jsonParsed.type) {
       case "initiate":
-        this.handleInitiate(peerId, destinationId, jsonParsed.isInitiate);
+        this.handleInitiate(peerId, jsonParsed.data);
         break;
       case "offer":
-        this.handleOffer(peerId, destinationId, jsonParsed.offer);
+        this.handleOffer(peerId, jsonParsed.data);
         break;
       case "answer":
-        this.handleAnswer(peerId, destinationId, jsonParsed.answer);
+        this.handleAnswer(peerId, jsonParsed.data);
         break;
       case "candidate":
-        this.handleCandidate(peerId, destinationId, jsonParsed.candidate);
+        this.handleCandidate(peerId, jsonParsed.data);
         break;
       default:
-        console.log("unknown message type");
+        console.log("[WebRTC] *** Unknown message type ***");
         break;
     }
   }
 
-  handleInitiate(peerId, destinationId, isInitiate) {
-    if (destinationId === "any" || destinationId === this.userId) {
-      this.peerConnections[peerId] = {
-        id: peerId,
-        pc: new RTCPeerConnection(WebRTC.serverConfig)
-      };
+  handleInitiate(peerId, isInitiate) {
+    this.peerConnections[peerId] = {
+      id: peerId,
+      pc: new RTCPeerConnection(WebRTC.serverConfig)
+    };
 
-      this.peerConnections[peerId].dataChannelSend = this.peerConnections[peerId].pc.createDataChannel("DemoDataChannel");
-      this.peerConnections[peerId].pc.addEventListener('datachannel', event => {
-        this.peerConnections[peerId].dataChannelReceive = event.channel;
-      });
+    let currPc = this.peerConnections[peerId];
 
-      if (isInitiate) {
-        this.socket.emit('msg', JSON.stringify({
-          type: 'initiate',
-          isInitiate: false,
-          id: this.userId,
-          destinationId: peerId
-        }));
-      }
-    }
+    // Adding objects for different channels for sending/receiving data
+    currPc.outDataChannels = {
+      "PlayerChannel": currPc.pc.createDataChannel("PlayerChannel"),
+      "ObjectChannel": currPc.pc.createDataChannel("ObjectChannel")
+    };
 
-    if (destinationId === this.userId) {
-      this.peerConnections[peerId].pc.createOffer(
-        offer => {
-          this.socket.emit('msg', JSON.stringify({
-            type: 'offer',
-            id: this.userId,
-            offer: offer,
-            destinationId: peerId
-          }));
-          this.peerConnections[peerId].pc.setLocalDescription(offer);
-        },
-        err => {
-          console.log(err);
-        }
-      )
-    }
+    currPc.inDataChannels = {};
+    currPc.pc.ondatachannel = event => {
+      let channel = event.channel;
+      currPc.inDataChannels[channel.label] = channel;
+    };
 
-    this.peerConnections[peerId].pc.onicecandidate = event => {
+    currPc.pc.onicecandidate = event => {
       if (event.candidate) {
-        this.socket.emit('msg', JSON.stringify({
-          type: 'candidate',
-          id: this.userId,
-          candidate: event.candidate,
-          destinationId: peerId
-        }))
+        this.toSignallingServer(peerId, "candidate", event.candidate);
       }
-    };  
+    }
 
-    this.peerConnections[peerId].pc.oniceconnectionstatechange = event => {
-      let state = this.peerConnections[peerId].pc.iceConnectionState;
-      if (WebRTC.iceConnectedStates.includes(state)) {
-        console.log("Connected over WebRTC with user " + peerId);
-      }
+    currPc.pc.oniceconnectionstatechange = event => {
+      let state = currPc.pc.iceConnectionState;
+      console.log("[WebRTC] Connection state with " + peerId + ": " + state);
 
       if (WebRTC.disconnectStates.includes(state)) {
-        console.log("Connection failed!!");
+        console.log("[WebRTC] Removing player " + peerId + " from player list");
         delete this.peerConnections[peerId];
       }
     }
-  }
 
-  handleOffer(peerId, destinationId, offer) {
-    if (this.userId === destinationId) {
-      this.peerConnections[peerId].pc.setRemoteDescription(new RTCSessionDescription(offer));
-      this.peerConnections[peerId].pc.createAnswer(
-        answer => {
-          this.socket.emit('msg', JSON.stringify(
-            {
-              type: 'answer',
-              id: this.userId,
-              answer: answer,
-              destinationId: peerId
-            }
-          ));
-          this.peerConnections[peerId].pc.setLocalDescription(answer);
-        },
-        error => {
-          console.log(error);
+    // Confusing way of writing: 
+    // If (I started the handshake)
+    //  Send Offer
+    // Else
+    //   Reply with my userID
+    if (isInitiate === true) {
+      this.toSignallingServer(peerId, "initiate", false);
+    } else {
+      currPc.pc.createOffer(
+        offer => {
+          this.toSignallingServer(peerId, "offer", offer);
+          currPc.pc.setLocalDescription(offer);
+        }, 
+        err => {
+          console.log(err);
         }
       );
     }
   }
 
-  handleAnswer(peerId, destinationId, answer) {
-    if (this.userId === destinationId) {
-      this.peerConnections[peerId].pc.setRemoteDescription(new RTCSessionDescription(answer));
-    }
+  handleOffer(peerId, offer) {
+    this.peerConnections[peerId].pc.setRemoteDescription(new RTCSessionDescription(offer));
+    this.peerConnections[peerId].pc.createAnswer(
+      answer => {
+        this.toSignallingServer(peerId, "answer", answer);
+        this.peerConnections[peerId].pc.setLocalDescription(answer);
+      },
+      error => {
+        console.log(error);
+      }
+    );
   }
 
-  handleCandidate(peerId, destinationId, candidate) {
-    if (this.userId === destinationId) {
-      this.peerConnections[peerId].pc.addIceCandidate(new RTCIceCandidate(candidate));
-    }
+  handleAnswer(peerId, answer) {
+    this.peerConnections[peerId].pc.setRemoteDescription(new RTCSessionDescription(answer));
+  }
+
+  handleCandidate(peerId, candidate) {
+    this.peerConnections[peerId].pc.addIceCandidate(new RTCIceCandidate(candidate));
+  }
+
+  toSignallingServer(destinationId, type, data) {
+    this.socket.emit('msg', JSON.stringify(
+      {
+        id: this.userId,
+        destinationId: destinationId,
+        type: type,
+        data: data,
+      }
+    ));
   }
 }

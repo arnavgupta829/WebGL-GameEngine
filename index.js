@@ -10,8 +10,11 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.set('view engine', 'ejs');
+
+// HTML pages are picked from the views dir
 app.set('views', 'views');
 
+// Serve static files from the public folder (all js scripts)
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res, next) => {

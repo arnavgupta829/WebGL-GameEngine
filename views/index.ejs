@@ -1,12 +1,20 @@
 <html>
   <body>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/utils.js"></script>
+    <canvas id = "canvas" width = 800 height = 800></canvas>
+    <script src=/js/utils.js></script>
     <script src="/js/webrtc.js"></script>
+    <script src=/js/shader.js></script>
+    <script src=/js/webgl.js></script>
+    <script src=/js/matrix.js></script>
+    <script src=/js/mesh.js></script>
+    <script src=/js/worldObject.js></script>
+    <script src=/js/hittable.js></script>
+    <script src=/js/player2.js></script>
+    <script src=/js/world.js></script>
+    <script src=/js/main.js></script>
     <script>
-      let webrtc = new WebRTC(createID());
-      webrtc.initConnection();
+      main();
     </script>
-    <p>Hello World</p>
   </body>
 </html>

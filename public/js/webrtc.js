@@ -1,8 +1,16 @@
+/**
+ * ToDo: Not handling promises. Might result in race conditions.
+ *       Works fine for multiple users atm but should prob fix.
+ */
 class WebRTC {
 
   userId;
   peerConnections;
   socket;
+  world;
+
+  // ToDo: No point in these being static. Transfer to constants class.
+  // Common WebRTC properties
   static serverConfig = {
     "iceServers": [
       { "url": "stun:stun.l.google.com:19302" },
@@ -11,10 +19,17 @@ class WebRTC {
   static disconnectStates = ["failed", "closed", "disconnected"];
   static iceConnectedStates = ["connected", "completed"];
 
-  constructor(userId) {
+  // Position attributes
+  // ArrayBuffer length
+  //  10 for alphanumeric UID
+  //  4 bytes each for x, y, z coordinates
+  static arrayBufferLength = 22;
+
+  constructor(userId, world) {
     this.userId = userId;
     this.peerConnections = {};
     this.socket = io();
+    this.world = world;
   }
 
   initConnection() {
@@ -22,6 +37,7 @@ class WebRTC {
 
     this.socket.on('msg', msg => this.handleHandshakeMessages(msg));
 
+    // Start Handshake
     this.toSignallingServer("all", "initiate", true);
   }
 
@@ -65,16 +81,38 @@ class WebRTC {
 
     let currPc = this.peerConnections[peerId];
 
-    // Adding objects for different channels for sending/receiving data
+    // Adding objects for different channels for sending/receiving data.
+    // Channels are set with order false and 0 retransmitts since in this
+    // early iteration we plan on skipping missed packets and updating
+    // peer player/object positions to the latest packet received
     currPc.outDataChannels = {
-      "PlayerChannel": currPc.pc.createDataChannel("PlayerChannel"),
-      "ObjectChannel": currPc.pc.createDataChannel("ObjectChannel")
+      "PlayerChannel": currPc.pc.createDataChannel("PlayerChannel", {
+        ordered: false,
+        maxRetransmits: 0
+      }),
+      "ObjectChannel": currPc.pc.createDataChannel("ObjectChannel", {
+        ordered: false,
+        maxRetransmits: 0
+      })
     };
 
     currPc.inDataChannels = {};
-    currPc.pc.ondatachannel = event => {
+    currPc.pc.ondatachannel = event => {    
       let channel = event.channel;
       currPc.inDataChannels[channel.label] = channel;
+
+      switch(channel.label) {
+        case "PlayerChannel":
+          channel.onmessage = event => this.receivePlayerState(event);
+          break;
+
+        case "ObjectChannel":
+          channel.onmessage = event => this.receiveObjectState(event);
+          break;
+
+        default:
+          console.log("[Error] [WebRTC] Data received from unknown channel");
+      }
     };
 
     currPc.pc.onicecandidate = event => {
@@ -143,5 +181,53 @@ class WebRTC {
         data: data,
       }
     ));
+  }
+
+  transmitPlayerState(player) {
+    for (const peerId in this.peerConnections) {
+      let channel = this.peerConnections[peerId].outDataChannels["PlayerChannel"];
+      if (channel.readyState === "open")
+        channel.send(this.encodePlayerData(player));
+    }
+  }
+
+  transmitObjectState() {
+
+  }
+
+  receivePlayerState(event) {
+    let playerData = this.decodePlayerData(event.data);
+    this.world.updatePeerPlayers(playerData);
+  }
+
+  receiveObjectState(event) {
+
+  }
+
+  encodePlayerData(player) {
+    let buffer = new ArrayBuffer(WebRTC.arrayBufferLength);
+
+    let uidView = new Uint8Array(buffer, 12, 10);
+    let positionView = new Float32Array(buffer, 0, 3);
+
+    for (let i = 0; i < 10; i++) {
+      uidView[i] = this.userId.charCodeAt(i);
+    }
+
+    positionView[0] = player.pos.x;
+    positionView[1] = player.pos.y;
+    positionView[2] = player.pos.z;
+
+    return buffer;
+  }
+
+  decodePlayerData(buffer) {
+    let uidView = new Uint8Array(buffer, 12, 10);
+    let positionView = new Float32Array(buffer, 0, 3);
+
+    let playerId = String.fromCharCode(... uidView);
+    let pos = {x: positionView[0], y: positionView[1], z: positionView[2]};
+
+    return {playerId: playerId, pos: pos};
   }
 }

@@ -31,6 +31,6 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(port, () => {
+server.listen("0:0:0:0", port, () => {
   console.log("Server started on port " + port);
 });

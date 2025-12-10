@@ -1,5 +1,6 @@
 class World {
   mView;
+  skyboxCube;
   player;
   playerWebrtc;
   peerPlayers;
@@ -12,6 +13,7 @@ class World {
     this.objects = [];
     this.grabables = [];
     this.peerPlayers = {};
+    this.skyboxCube = new Float32Array(Shape.skybox);
     this.rollingTextureIndex = 0;
     this.initWorld(webglContext, document, canvas);
   }
@@ -25,7 +27,8 @@ class World {
     let flatMeshData = new Float32Array(Shape.flat(10, 10));
     let cubeMeshData = new Float32Array(Shape.cube());
 
-    let floor = new Mesh(true, WebGL.textureVertexMap, [0, 1, 0], false);
+    let floor = new Mesh(true, WebGL.textureVertexMap, [0, 1, 0], false, 0, -1);
+    floor.addTexture(webglContext, 'ground.png', 'ground.png', 0, 1);
     let fm = new Matrix();
     fm.scale(50).translate(0, 0, 0);
     floor.getMatrices().push(fm);
@@ -55,17 +58,17 @@ class World {
     wallLeft.getMatrices().push(wfl);
     wallLeft.setData(flatMeshData);
 
-    let ball = new Mesh(false, WebGL.defaultVertexMap, [1, 0, 0], false);
+    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb = new Matrix();
-    mb.scale(1).translate(0, 0, -10);
+    mb.scale(1).translate(0, 0.5, -10);
     ball.getMatrices().push(mb);
     ball.setData(cubeMeshData);
     // HAVE to hardcode texture indices and assign them using if-else in the shader
-    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
-    let ballGrabable = new Grabable2(0, 0, -10, 1, 1, 1);
+    ball.addTexture(webglContext, 'blockcomplete.png', 'blockcomplete.png', 2, 3);
+    let ballGrabable = new Grabable2(0, 0.5, -10, 1, 1, 1);
     ballGrabable.addMesh(ball);
 
-    let ball2 = new Mesh(false, WebGL.defaultVertexMap, [1, 0, 0], false);
+    let ball2 = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb2 = new Matrix();
     mb2.scale(1).translate(0, 1, -13);
     ball2.getMatrices().push(mb2);
@@ -120,30 +123,70 @@ class World {
     }
 
     for (let playerId in this.peerPlayers) {
-      this.peerPlayers[playerId].drawMesh(webglContext, this.mView.getWorldMatrix());
+      this.peerPlayers[playerId].drawObject(webglContext, this.mView.getWorldMatrix());
     }
 
+    webglContext.toggleDepthTest(false);
     this.player.drawObject(webglContext, new Matrix().getWorldMatrix());
+
+    webglContext.toggleDepthTest(true);
+
+    webglContext.drawSkyBox(this.skyboxCube, Matrix.inverse(this.mView.getWorldMatrix()));
   }
 
   updatePeerPlayers(playerData) {
     if (!(playerData.playerId in this.peerPlayers)) {
-      let cubeMeshData = new Float32Array(Shape.sphere(10, 10));
-      let ball = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false);
-      let mb = new Matrix();
-      mb.scale(0.3).translate(0, 1, 0);
-      ball.getMatrices().push(mb);
-      ball.setData(cubeMeshData);
+      let newPlayer = new Player2(document, canvas, this, false);
 
-      this.peerPlayers[playerData.playerId] = ball;
+      // let cubeMeshData = new Float32Array(Shape.sphere(10, 10));
+      // let ball = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false);
+      // let mb = new Matrix();
+      // mb.scale(0.3).translate(0, 1, 0);
+      // ball.getMatrices().push(mb);
+      // ball.setData(cubeMeshData);
+
+      this.peerPlayers[playerData.playerId] = newPlayer;
     }
 
-    this.peerPlayers[playerData.playerId].getPositionMatrix().reset().translate(playerData.pos.x, playerData.pos.y, playerData.pos.z);
+    this.peerPlayers[playerData.playerId].pos.x = playerData.pos.x;
+    this.peerPlayers[playerData.playerId].pos.y = playerData.pos.y;
+    this.peerPlayers[playerData.playerId].pos.z = playerData.pos.z;
+    this.peerPlayers[playerData.playerId].updateMeshPos();
+  }
+
+  updatePeerObjects(objectData) {
+    let cubeMeshData = new Float32Array(Shape.cube());
+    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 0, -1);
+    let mb2 = new Matrix();
+    mb2.scale(0.5);
+    mb2.translate(objectData.pos.x, objectData.pos.y, 0.5, objectData.pos.z);
+    ball.getMatrices().push(mb2);
+    ball.setData(cubeMeshData);
+
+    // HAVE to hardcode texture indices and assign them using if-else in the shader
+    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
+    let ballGrabable2 = new Grabable2(objectData.pos.x, objectData.pos.y, 0.5, objectData.pos.z, 1, 1, 1);
+    ballGrabable2.addMesh(ball);
+    this.grabables.push(ballGrabable2);
   }
 
   addObject() {
-    let ball = new MeshObject('sphere', [1, 1, 0], [50, 50]);
-    ball.getMatrix().scale(1).translate(this.player.x + 5 * Math.sin(this.player.yaw), this.player.y, this.player.z - 5 * Math.cos(this.player.yaw));
-    this.grabables.push(new Grabable(ball));
+    let cubeMeshData = new Float32Array(Shape.cube());
+    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
+    let mb2 = new Matrix();
+    mb2.scale(0.5);
+    mb2.translate(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.pos.y + this.player.box.ly / 2 - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw));
+    ball.getMatrices().push(mb2);
+    ball.setData(cubeMeshData);
+
+    // HAVE to hardcode texture indices and assign them using if-else in the shader
+    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
+    let ballGrabable2 = new Grabable2(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 +  this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw), 1, 1, 1);
+    ballGrabable2.addMesh(ball);
+    this.grabables.push(ballGrabable2);
+
+    let pos = mb2.get().slice(12, 15);
+
+    this.playerWebrtc.transmitObjectState(ballGrabable2);
   }
 }

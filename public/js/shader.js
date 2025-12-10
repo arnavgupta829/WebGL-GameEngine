@@ -1,4 +1,32 @@
 let Shader = {
+  skyboxVs: `\
+    #version 300 es
+    in vec4 aPos;
+    out vec4 vPos;
+    void main() {
+      vPos = aPos;
+      gl_Position = aPos;
+      gl_Position.z = 1.0;
+    }
+  `,
+
+  skyboxFs: `\
+    #version 300 es
+    precision highp float;
+    
+    uniform samplerCube uSkybox;
+    uniform mat4 uMVI;
+    
+    in vec4 vPos;
+    
+    out vec4 fragColor;
+    
+    void main() {
+      vec4 t = uMVI * vPos;
+      fragColor = texture(uSkybox, normalize(t.xyz / t.w));
+    }
+  `,
+
   vs: `\
     #version 300 es
 
@@ -56,8 +84,18 @@ let Shader = {
       vec4 T = vec4(1.);
 
       if (textureIndex != -1) {
-        B = texture(uSampler[1], vUV);
-        T = texture(uSampler[0], vUV);
+        if (textureIndex == 0) {
+          T = texture(uSampler[0], vUV);
+        } else if (textureIndex == 2) {
+          T = texture(uSampler[2], vUV); 
+        }
+      }
+      if (bumpMapIndex != -1) {
+        if (bumpMapIndex == 1) {
+          B = texture(uSampler[1], vUV);
+        } else if (bumpMapIndex == 3) {
+          B = texture(uSampler[1], vUV);
+        } 
       }
 
       vec3 bin = normalize(cross(nor,tan));

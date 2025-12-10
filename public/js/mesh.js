@@ -93,6 +93,11 @@ class Mesh {
     this.matrices.push(m);
   }
 
+  addTexture(webGLContext, texSrc, bmpSrc, texIdx, bmpIdx) {
+    this.textureIndex = webGLContext.addTexture(texSrc, texIdx);
+    this.bumpMapIndex = webGLContext.addTexture(bmpSrc, bmpIdx);
+  }
+
   // Draw object
   drawMesh(webglContext, viewMatrix) {
     webglContext.mapVertex(this.vertexMap);

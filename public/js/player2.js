@@ -25,10 +25,10 @@ class Player2 extends WorldObject {
   uncrouchStartTime;
 
   constructor(document, canvas, world, isPrimaryPlayer = true) { 
-    super(0, 0.5, 0, 2, 1, 2);
+    super(0, 0.5, 0, 1, 1, 1);
     this.world = world;
     this.isPlayerReady = false;
-    this.initMesh().then((result) => this.isPlayerReady = true);
+    this.initMesh(isPrimaryPlayer).then((result) => this.isPlayerReady = true);
     this.isPrimaryPlayer = isPrimaryPlayer;
     this.playerId = createID();
 
@@ -57,7 +57,7 @@ class Player2 extends WorldObject {
     this.isUncrouching = false;
     this.uncrouchStartTime = 0;
 
-    this.initEvents(document, canvas);
+    this.initEvents(document, canvas, this.isPrimaryPlayer);
   }
 
   updateYaw(delta) {
@@ -74,7 +74,7 @@ class Player2 extends WorldObject {
       .reset()
       .turnX(-this.pitch)
       .turnY(-this.yaw)
-      .translate(this.pos.x, this.pos.y + this.height, this.pos.z);
+      .translate(this.pos.x, this.pos.y + (this.height / 2), this.pos.z);
 
     return this.cameraMatrix;
   }
@@ -138,16 +138,16 @@ class Player2 extends WorldObject {
     // // ToDo: Works fine visually but methinks there are bugs
     if (this.isCrouching && !this.isUncrouching) {
       let delTime = (performance.now() - this.crouchStartTime) / 1000;
-      this.pos.y = Math.max(this.height / 2, this.height - (this.crouchSpeed * delTime));
+      this.pos.y = Math.max(this.height / 4, (this.height / 2) - (this.crouchSpeed * delTime));
       this.currentCrouchHeight = this.pos.y;
       this.box.ly = this.pos.y * 2;
     }
 
     if (this.isUncrouching) {
       let delTime = (performance.now() - this.uncrouchStartTime) / 1000;
-      this.pos.y = Math.min(this.height, this.currentCrouchHeight + (this.crouchSpeed * delTime));
+      this.pos.y = Math.min(this.height / 2, this.currentCrouchHeight + (this.crouchSpeed * delTime));
       this.box.ly = this.pos.y * 2;
-      if (this.pos.y >= this.height) {
+      if (this.pos.y >= this.height / 2) {
         this.isUncrouching = false;
       }
     }
@@ -155,7 +155,7 @@ class Player2 extends WorldObject {
 
   }
 
-  async initMesh() {
+  async initMesh(isPrimary) {
     let handData = await getMesh("/js/handData.txt");
 
     let rightHand = new Mesh(
@@ -168,21 +168,35 @@ class Player2 extends WorldObject {
 
     // the hand is an implicit surface made up of 18 blobs. one transformation matrix for each
     for (let i = 0; i < 18; i++) {
-      let m1 = new Matrix();
-      m1.scale(-0.2, 0.2, 0.2).turnZ(Math.PI / 6).translate(-0.2, -0.3, -1);
+      if (isPrimary) {
+        let m1 = new Matrix();
+        m1.scale(-0.2, 0.2, 0.2).turnZ(Math.PI / 6).translate(-0.2, -0.3, -1);
 
-      let m2 = new Matrix();
-      m2.scale(0.2).turnZ(-Math.PI / 6).translate(0.2, -0.3, -1);
+        let m2 = new Matrix();
+        m2.scale(0.2).turnZ(-Math.PI / 6).translate(0.2, -0.3, -1);
 
-      leftHand.getMatrices().push(m1);
-      rightHand.getMatrices().push(m2);
+        leftHand.getMatrices().push(m1);
+        rightHand.getMatrices().push(m2);
+      } else {
+        let m1 = new Matrix();
+        m1.scale(-0.2, 0.2, 0.2).turnZ(Math.PI / 6).translate(-0.2, 0.4, 0);
+
+        let m2 = new Matrix();
+        m2.scale(0.2).turnZ(-Math.PI / 6).translate(0.2, 0.4, 0);
+
+        leftHand.getMatrices().push(m1);
+        rightHand.getMatrices().push(m2);
+      }
     }
 
     this.addMesh(leftHand);
     this.addMesh(rightHand);
   }
 
-  initEvents(document, canvas) {
+  initEvents(document, canvas, isPrimary) {
+    if (!isPrimary) {
+      return;
+    }
     document.addEventListener('keydown', e => {
       switch(e.key.toLowerCase()) {
         case 'w':
@@ -197,12 +211,12 @@ class Player2 extends WorldObject {
         case 'a':
           this.dirX = -1;
           break;
-        // case 'e':
-        //   if (!this.isActionKey) {
-        //     this.isActionKey = true;
-        //     this.world.addObject();
-        //   }
-        //   break;
+        case 'e':
+          if (!this.isActionKey) {
+            this.isActionKey = true;
+            this.world.addObject();
+          }
+          break;
         case 'shift':
           this.sprintMutliplier = 2;
           break;

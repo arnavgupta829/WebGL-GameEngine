@@ -191,8 +191,12 @@ class WebRTC {
     }
   }
 
-  transmitObjectState() {
-
+  transmitObjectState(object) {
+    for (const peerId in this.peerConnections) {
+      let channel = this.peerConnections[peerId].outDataChannels["ObjectChannel"];
+      if (channel.readyState === "open")
+          channel.send(this.encodePlayerData(object, false));
+    }
   }
 
   receivePlayerState(event) {
@@ -201,17 +205,20 @@ class WebRTC {
   }
 
   receiveObjectState(event) {
-
+    let objectData = this.decodePlayerData(event.data, false);
+    this.world.updatePeerObjects(objectData);
   }
 
-  encodePlayerData(player) {
+  encodePlayerData(player, isPlayer = true) {
     let buffer = new ArrayBuffer(WebRTC.arrayBufferLength);
 
     let uidView = new Uint8Array(buffer, 12, 10);
     let positionView = new Float32Array(buffer, 0, 3);
 
-    for (let i = 0; i < 10; i++) {
-      uidView[i] = this.userId.charCodeAt(i);
+    if (isPlayer) {
+      for (let i = 0; i < 10; i++) {
+        uidView[i] = this.userId.charCodeAt(i);
+      }
     }
 
     positionView[0] = player.pos.x;
@@ -221,7 +228,7 @@ class WebRTC {
     return buffer;
   }
 
-  decodePlayerData(buffer) {
+  decodePlayerData(buffer, isPlayer = true) {
     let uidView = new Uint8Array(buffer, 12, 10);
     let positionView = new Float32Array(buffer, 0, 3);
 

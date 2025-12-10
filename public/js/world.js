@@ -128,11 +128,11 @@ class World {
       this.peerPlayers[playerId].drawObject(webglContext, this.mView.getWorldMatrix());
     }
 
-    // webglContext.toggleDepthTest(false);
-    this.player.drawObject(webglContext, new Matrix().getWorldMatrix());
-    // webglContext.toggleDepthTest(true);
-
     webglContext.drawSkyBox(this.skyboxCube, Matrix.inverse(this.mView.getWorldMatrix()));
+
+        webglContext.toggleDepthTest(false);
+    this.player.drawObject(webglContext, new Matrix().getWorldMatrix());
+    webglContext.toggleDepthTest(true);
   }
 
   updatePeerPlayers(playerData) {

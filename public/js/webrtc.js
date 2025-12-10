@@ -23,7 +23,7 @@ class WebRTC {
   // ArrayBuffer length
   //  10 for alphanumeric UID
   //  4 bytes each for x, y, z coordinates
-  static arrayBufferLength = 22;
+  static arrayBufferLength = 30;
 
   constructor(userId, world) {
     this.userId = userId;
@@ -128,6 +128,7 @@ class WebRTC {
       if (WebRTC.disconnectStates.includes(state)) {
         console.log("[WebRTC] Removing player " + peerId + " from player list");
         delete this.peerConnections[peerId];
+        this.world.deletePeerPlayer(peerId);
       }
     }
 
@@ -212,8 +213,8 @@ class WebRTC {
   encodePlayerData(player, isPlayer = true) {
     let buffer = new ArrayBuffer(WebRTC.arrayBufferLength);
 
-    let uidView = new Uint8Array(buffer, 12, 10);
-    let positionView = new Float32Array(buffer, 0, 3);
+    let uidView = new Uint8Array(buffer, 20, 10);
+    let positionView = new Float32Array(buffer, 0, 5);
 
     if (isPlayer) {
       for (let i = 0; i < 10; i++) {
@@ -224,16 +225,18 @@ class WebRTC {
     positionView[0] = player.pos.x;
     positionView[1] = player.pos.y;
     positionView[2] = player.pos.z;
+    positionView[3] = player.pitch??0;
+    positionView[4] = player.yaw??0;
 
     return buffer;
   }
 
   decodePlayerData(buffer, isPlayer = true) {
-    let uidView = new Uint8Array(buffer, 12, 10);
-    let positionView = new Float32Array(buffer, 0, 3);
+    let uidView = new Uint8Array(buffer, 20, 10);
+    let positionView = new Float32Array(buffer, 0, 5);
 
     let playerId = String.fromCharCode(... uidView);
-    let pos = {x: positionView[0], y: positionView[1], z: positionView[2]};
+    let pos = {x: positionView[0], y: positionView[1], z: positionView[2], pitch: positionView[3], yaw: positionView[4]};
 
     return {playerId: playerId, pos: pos};
   }

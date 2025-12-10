@@ -13,7 +13,7 @@ class World {
     this.objects = [];
     this.grabables = [];
     this.peerPlayers = {};
-    this.skyboxCube = new Float32Array(Shape.skybox);
+    this.skyboxCube = new Float32Array(Shape.skybox());
     this.rollingTextureIndex = 0;
     this.initWorld(webglContext, document, canvas);
   }
@@ -65,7 +65,7 @@ class World {
     ball.setData(cubeMeshData);
     // HAVE to hardcode texture indices and assign them using if-else in the shader
     ball.addTexture(webglContext, 'blockcomplete.png', 'blockcomplete.png', 2, 3);
-    let ballGrabable = new Grabable2(0, 0.5, -10, 1, 1, 1);
+    let ballGrabable = new Grabable2(0, 0.5, -10, 2, 2, 2);
     ballGrabable.addMesh(ball);
 
     let ball2 = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
@@ -75,7 +75,7 @@ class World {
     ball2.setData(cubeMeshData);
     // HAVE to hardcode texture indices and assign them using if-else in the shader
     // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
-    let ballGrabable2 = new Grabable2(0, 1, -13, 1, 1, 1);
+    let ballGrabable2 = new Grabable2(0, 1, -13, 2, 2, 2);
     ballGrabable2.addMesh(ball2);
 
     this.objects.push(floor);
@@ -89,7 +89,9 @@ class World {
   }
 
   initPlayer(document, canvas) {
-    this.player = new Player2(document, canvas, this);
+    let x = Math.floor(Math.random() * 10);
+    let z = Math.floor(Math.random() * 5);
+    this.player = new Player2(document, canvas, this, true, x, z);
     this.playerWebrtc = new WebRTC(this.player.playerId, this);
     this.playerWebrtc.initConnection();
 
@@ -126,28 +128,18 @@ class World {
       this.peerPlayers[playerId].drawObject(webglContext, this.mView.getWorldMatrix());
     }
 
-    webglContext.toggleDepthTest(false);
+    // webglContext.toggleDepthTest(false);
     this.player.drawObject(webglContext, new Matrix().getWorldMatrix());
-
-    webglContext.toggleDepthTest(true);
+    // webglContext.toggleDepthTest(true);
 
     webglContext.drawSkyBox(this.skyboxCube, Matrix.inverse(this.mView.getWorldMatrix()));
   }
 
   updatePeerPlayers(playerData) {
     if (!(playerData.playerId in this.peerPlayers)) {
-      let newPlayer = new Player2(document, canvas, this, false);
-
-      // let cubeMeshData = new Float32Array(Shape.sphere(10, 10));
-      // let ball = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false);
-      // let mb = new Matrix();
-      // mb.scale(0.3).translate(0, 1, 0);
-      // ball.getMatrices().push(mb);
-      // ball.setData(cubeMeshData);
-
+      let newPlayer = new Player2(document, canvas, this, false, playerData.pos.x, playerData.pos.z);
       this.peerPlayers[playerData.playerId] = newPlayer;
     }
-
     this.peerPlayers[playerData.playerId].pos.x = playerData.pos.x;
     this.peerPlayers[playerData.playerId].pos.y = playerData.pos.y;
     this.peerPlayers[playerData.playerId].pos.z = playerData.pos.z;
@@ -156,16 +148,16 @@ class World {
 
   updatePeerObjects(objectData) {
     let cubeMeshData = new Float32Array(Shape.cube());
-    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 0, -1);
+    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb2 = new Matrix();
     mb2.scale(0.5);
-    mb2.translate(objectData.pos.x, objectData.pos.y, 0.5, objectData.pos.z);
+    mb2.translate(objectData.pos.x, objectData.pos.y, objectData.pos.z);
     ball.getMatrices().push(mb2);
     ball.setData(cubeMeshData);
 
     // HAVE to hardcode texture indices and assign them using if-else in the shader
     // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
-    let ballGrabable2 = new Grabable2(objectData.pos.x, objectData.pos.y, 0.5, objectData.pos.z, 1, 1, 1);
+    let ballGrabable2 = new Grabable2(objectData.pos.x, objectData.pos.y, objectData.pos.z, 1, 1, 1);
     ballGrabable2.addMesh(ball);
     this.grabables.push(ballGrabable2);
   }
@@ -188,5 +180,10 @@ class World {
     let pos = mb2.get().slice(12, 15);
 
     this.playerWebrtc.transmitObjectState(ballGrabable2);
+  }
+
+  deletePeerPlayer(playerId) {
+    console.log("[WebGL] Deleting player form render");
+    delete this.peerPlayers[playerId];
   }
 }

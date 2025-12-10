@@ -24,8 +24,8 @@ class Player2 extends WorldObject {
   isUncrouching;
   uncrouchStartTime;
 
-  constructor(document, canvas, world, isPrimaryPlayer = true) { 
-    super(0, 0.5, 0, 1, 1, 1);
+  constructor(document, canvas, world, isPrimaryPlayer = true, x, z) { 
+    super(x, 0.5, z, 1, 1, 1);
     this.world = world;
     this.isPlayerReady = false;
     this.initMesh(isPrimaryPlayer).then((result) => this.isPlayerReady = true);
@@ -121,6 +121,19 @@ class Player2 extends WorldObject {
         }
       }
     }
+
+    for (let key in this.world.peerPlayers) {
+      let obj = this.world.peerPlayers[key];
+      if (WorldObject.isHitting(this, obj)) {
+        if (WorldObject.collideFromTop(this, obj, dy)) {
+          this.pos.y = (this.box.ly / 2) + obj.pos.y + (obj.box.ly / 2);
+          foundTopCollision = true;
+        } else {
+          this.pos.x -= dx;
+          this.pos.z -= dz;
+        }
+      }
+    }
     
     if (foundTopCollision) {
       this.isGrounded = true;
@@ -152,7 +165,7 @@ class Player2 extends WorldObject {
       }
     }
 
-
+    this.updateHands();
   }
 
   async initMesh(isPrimary) {
@@ -179,18 +192,78 @@ class Player2 extends WorldObject {
         rightHand.getMatrices().push(m2);
       } else {
         let m1 = new Matrix();
-        m1.scale(-0.2, 0.2, 0.2).turnZ(Math.PI / 6).translate(-0.2, 0.4, 0);
+        m1.scale(-0.2, 0.2, 0.2).turnZ(Math.PI / 6).translate(-0.2, 0.4, -0.5);
 
         let m2 = new Matrix();
-        m2.scale(0.2).turnZ(-Math.PI / 6).translate(0.2, 0.4, 0);
+        m2.scale(0.2).turnZ(-Math.PI / 6).translate(0.2, 0.4, -0.5);
 
         leftHand.getMatrices().push(m1);
         rightHand.getMatrices().push(m2);
       }
     }
 
+    if (!isPrimary) {
+      let body = new Mesh(false, WebGL.textureVertexMap, [1, 0.7, 0.5], false, -1, -1);
+      body.setData(new Float32Array(Shape.cube()));
+      let bodyMatrix = new Matrix();
+      bodyMatrix.scale(0.2, 0.5, 0.2).translate(0, 0.5, 0);
+      body.getMatrices().push(bodyMatrix);
+      this.addMesh(body);
+
+      let legLeft = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false, -1, -1);
+      legLeft.setData(new Float32Array(Shape.tube(10)));
+      let leftLegMatrix = new Matrix();
+      leftLegMatrix.scale(0.1, 0.1, 0.4).turnX(Math.PI/2).translate(-0.1, 0, 0);
+      legLeft.getMatrices().push(leftLegMatrix);
+      this.addMesh(legLeft);
+
+      let legRight = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false, -1, -1);
+      legRight.setData(new Float32Array(Shape.tube(10)));
+      let legRightMatrix = new Matrix();
+      legRightMatrix.scale(0.1, 0.1, 0.4).turnX(Math.PI/2).translate(0.1, 0, 0);
+      legRight.getMatrices().push(legRightMatrix);
+      this.addMesh(legRight);
+    }
+
     this.addMesh(leftHand);
     this.addMesh(rightHand);
+  }
+
+  updateHands() {
+    if (!this.isPrimaryPlayer) {
+      return;
+    }
+    if (!this.isGrounded) {
+      for (let i = 0; i < 18; i++) {
+        this.meshes[0].getMatrix(i)
+          .reset()
+          .scale(-0.2, 0.2, 0.2)
+          .turnZ(Math.PI / 6)
+          .turnX(Math.PI / 8)
+          .translate(-0.2, -0.3, -1);
+
+        this.meshes[1].getMatrix(i)
+          .reset()
+          .scale(0.2)
+          .turnZ(-Math.PI / 6)
+          .turnX(Math.PI / 8)
+          .translate(0.2, -0.3, -1);
+      }
+    } else {
+      for (let i = 0; i < 18; i++) {
+        this.meshes[0].getMatrix(i)
+          .reset()
+          .scale(-0.2, 0.2, 0.2)
+          .turnZ(Math.PI / 6)
+          .translate(-0.2, -0.3, -1);
+
+        this.meshes[1].getMatrix(i)
+          .reset()
+          .scale(0.2)
+          .turnZ(-Math.PI / 6)
+          .translate(0.2, -0.3, -1);
+      }
+    }
   }
 
   initEvents(document, canvas, isPrimary) {
@@ -274,6 +347,10 @@ class Player2 extends WorldObject {
       } else {
         this.updatePitch(e.movementY);
       }
+    });
+
+    canvas.addEventListener('click', async() => {
+      await canvas.requestPointerLock();
     });
   }
 }

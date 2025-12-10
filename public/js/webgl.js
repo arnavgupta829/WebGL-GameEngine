@@ -62,6 +62,7 @@ class WebGL {
   }
 
   drawObj(data, isTriangleStrip, matrix, matrixMovement, color, textureIndex, bumpMapIndex, isImplicitSurface) {
+    // this.gl.depthFunc(this.gl.LESS);
     this.setUniform('1iv', 'uSampler', [0, 1, 2, 3]);
     this.setUniform('Matrix4fv', 'uMF', false, matrix);    
     this.setUniform('Matrix4fv', 'uMV', false, matrixMovement);    
@@ -79,28 +80,29 @@ class WebGL {
   }
 
   drawSkyBox(data, viewMatrixInverse) {
+    // this.gl.depthFunc(this.gl.LEQUAL);
     this.gl.useProgram(this.skyboxProgram);
-    this.mapVertex(WebGL.skyboxVertexMap);
-    this.setSkyboxUniform('1i', 'uSkybox', 4);
+    this.mapVertex(WebGL.skyboxVertexMap, this.skyboxProgram);
+    this.setSkyboxUniform('1i', 'uSkybox', 0);
     this.setSkyboxUniform('Matrix4fv', 'uMVI', false, viewMatrixInverse);
     this.drawMesh(data, false);
     this.gl.useProgram(this.program);
   }
 
-  mapVertex(map) {
+  mapVertex(map, program) {
     this.vertexSize = 0;
     for (let n = 0 ; n < map.length ; n += 2)
         this.vertexSize += map[n+1];
     
     let index = 0;
     for (let n = 0 ; n < map.length ; n += 2) {
-        this.mapVertexAttribute(map[n], map[n+1], index);
+        this.mapVertexAttribute(map[n], map[n+1], index, program);
         index += map[n+1];
     }
   }
 
-  mapVertexAttribute(name, size, position) {
-    let attr = this.gl.getAttribLocation(this.program, name);
+  mapVertexAttribute(name, size, position, program) {
+    let attr = this.gl.getAttribLocation(program??this.program, name);
     this.gl.enableVertexAttribArray(attr);
     this.gl.vertexAttribPointer(attr, size, this.gl.FLOAT, false, this.vertexSize * 4, position * 4);
   }
@@ -157,27 +159,33 @@ class WebGL {
     let faces = [
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_X,
-        url: "/textures/skyboxside3.png"
+        url: "/textures/resized_skyboxside1.png"
+        // url: "/textures/blockcomplete.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
-        url: "/textures/skyboxside1.png"
+        url: "/textures/resized_skyboxside1.png"
+        // url: "/textures/blockcomplete.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
-        url: "/textures/skyboxtop.png"
+        url: "/textures/resized_skyboxtop.png"
+        // url: "/textures/blockcomplete.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        url: "/textures/skyboxbottom.png"
+        url: "/textures/resized_skyboxbottom.png"
+        // url: "/textures/blockcomplete.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
-        url: "/textures/skyboxside2.png"
+        url: "/textures/resized_skyboxside1.png"
+        // url: "/textures/blockcomplete.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-        url: "/textures/skyboxside4.png"
+        url: "/textures/resized_skyboxside1.png"
+        // url: "/textures/skyboxside4.png"
       }
     ];
 
@@ -189,7 +197,6 @@ class WebGL {
       this.gl.texImage2D(target, 0, this.gl.RGBA, 512, 512, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
 
       img.onload = () => {
-        this.gl.activeTexture(this.gl.TEXTURE0 + 4);
         this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, texture);
         this.gl.texImage2D(target, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
         this.gl.generateMipmap(this.gl.TEXTURE_CUBE_MAP);
@@ -197,7 +204,6 @@ class WebGL {
 
       img.src = url;
     });
-
 
     this.gl.generateMipmap(this.gl.TEXTURE_CUBE_MAP);
     this.gl.texParameteri(this.gl.TEXTURE_CUBE_MAP, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_LINEAR);

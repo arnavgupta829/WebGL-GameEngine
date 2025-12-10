@@ -24,6 +24,7 @@ let Shader = {
     void main() {
       vec4 t = uMVI * vPos;
       fragColor = texture(uSkybox, normalize(t.xyz / t.w));
+      // fragColor = vec4(0.2, 0.3, 0.6, 1.);
     }
   `,
 

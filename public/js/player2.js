@@ -25,7 +25,7 @@ class Player2 extends WorldObject {
   uncrouchStartTime;
 
   constructor(document, canvas, world, isPrimaryPlayer = true) { 
-    super(0, 0.35, 0, 2, 1, 2);
+    super(0, 0.5, 0, 2, 1, 2);
     this.world = world;
     this.isPlayerReady = false;
     this.initMesh().then((result) => this.isPlayerReady = true);

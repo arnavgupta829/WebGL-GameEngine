@@ -175,13 +175,13 @@ class World {
     let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb2 = new Matrix();
     mb2.scale(0.5);
-    mb2.translate(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.pos.y + this.player.box.ly / 2 - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw));
+    mb2.translate(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 + this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw));
     ball.getMatrices().push(mb2);
     ball.setData(cubeMeshData);
 
     // HAVE to hardcode texture indices and assign them using if-else in the shader
     // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
-    let ballGrabable2 = new Grabable2(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 +  this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw), 1, 1, 1);
+    let ballGrabable2 = new Grabable2(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 + this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw), 1, 1, 1);
     ballGrabable2.addMesh(ball);
     this.grabables.push(ballGrabable2);
 

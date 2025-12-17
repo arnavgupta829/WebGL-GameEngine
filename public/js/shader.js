@@ -89,6 +89,10 @@ let Shader = {
           T = texture(uSampler[0], vUV);
         } else if (textureIndex == 2) {
           T = texture(uSampler[2], vUV); 
+        } else if (textureIndex == 4) {
+          T = texture(uSampler[4], vUV); 
+        } else if (textureIndex == 5) {
+          T = texture(uSampler[5], vUV); 
         }
       }
       if (bumpMapIndex != -1) {

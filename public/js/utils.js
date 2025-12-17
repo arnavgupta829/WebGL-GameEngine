@@ -73,9 +73,9 @@ let Shape = {
       : [x, y, z, x, y, z];
   }),
 
-  flat : (nu, nv, hasTexture) => createMesh(nu, nv, (u, v) => {
+  flat : (nu, nv, hasTexture, scaleX=1, scaleY=1) => createMesh(nu, nv, (u, v) => {
     return hasTexture??true 
-      ? [2 * u - 1, 0, 2 * v - 1, 0, 1, 0, 1, 0, 0, 4 * u, 4 * v] 
+      ? [2 * u - 1, 0, 2 * v - 1, 0, 1, 0, 1, 0, 0, scaleX * u, scaleY * v] 
       : [2 * u - 1, 0, 2 * v - 1,  0, 1, 0];
   }),
 
@@ -493,7 +493,7 @@ let linefont = [
       }
    }
 
-   let createTextMesh = text => {
+   let createTextMesh = (text, lineWidth) => {
       let myPaths = [], lines = text.split('\n'), c;
       for (let row = 0 ; row < lines.length ; row++)
       for (let col = 0 ; col < lines[row].length ; col++)
@@ -510,5 +510,18 @@ let linefont = [
                myPaths.push(myPath);
             }
          }
-      return createPathsMesh(.0025, myPaths);
+      return createPathsMesh(lineWidth??.0025, myPaths);
    }
+
+   helpMenuText=`\
+   W - Move Forward\n
+   A - Move Left\n
+   D - Move Right\n
+   S - Move Backwards\n
+   Space - Jump\n
+   Space(Hold) - BHop\n
+   C - Crouch\n
+   E - Spawn Block\n
+   <scroll> - Change Block Type\n
+   <mouseclick> - Hit someone when you're\nclose to them
+   `;

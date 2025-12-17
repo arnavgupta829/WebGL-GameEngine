@@ -24,58 +24,64 @@ class World {
   }
 
   initBackground(webglContext) {
-    let flatMeshData = new Float32Array(Shape.flat(10, 10));
+    let flatMeshFloor = new Float32Array(Shape.flat(10, 10, true, 10, 10));
+    let flatMeshData = new Float32Array(Shape.flat(10, 10, true, 60, 10));
     let cubeMeshData = new Float32Array(Shape.cube());
 
-    let floor = new Mesh(true, WebGL.textureVertexMap, [0, 1, 0], false, 0, -1);
+    let floor = new Mesh(true, WebGL.textureVertexMap, [1, 1, 1], false, 0, -1);
     floor.addTexture(webglContext, 'ground.png', 'ground.png', 0, 1);
     let fm = new Matrix();
     fm.scale(50).translate(0, 0, 0);
     floor.getMatrices().push(fm);
-    floor.setData(flatMeshData);
+    floor.setData(flatMeshFloor);
 
-    let wallFront = new Mesh(true, WebGL.textureVertexMap, [0, 0.5, 0], false);
+    let wallFront = new Mesh(true, WebGL.textureVertexMap, [1, 1, 1], false);
+    webglContext.addTexture('wall.png', 5);
+    wallFront.textureIndex = 5;
     let wfm = new Matrix();
     wfm.scale(50, 1, 2).turnX(Math.PI/2).translate(0, 0, -50);
     wallFront.getMatrices().push(wfm);
     wallFront.setData(flatMeshData);
 
-    let wallRight = new Mesh(true, WebGL.textureVertexMap, [0, 0.5, 0], false);
+    let wallRight = new Mesh(true, WebGL.textureVertexMap, [1, 1, 1], false);
     let wfr = new Matrix();
+    wallRight.textureIndex = 5;
     wfr.scale(2, 1, 50).turnZ(Math.PI/2).translate(50, 0, 0);
     wallRight.getMatrices().push(wfr);
     wallRight.setData(flatMeshData);
 
-    let wallBack = new Mesh(true, WebGL.textureVertexMap, [0, 0.5, 0], false);
+    let wallBack = new Mesh(true, WebGL.textureVertexMap, [1, 1, 1], false);
     let wfb = new Matrix();
+    wallBack.textureIndex = 5;
     wfb.scale(50, 1, 2).turnX(Math.PI/2).translate(0, 0, 50);
     wallBack.getMatrices().push(wfb);
     wallBack.setData(flatMeshData);
 
-    let wallLeft = new Mesh(true, WebGL.textureVertexMap, [0, 0.5, 0], false);
+    let wallLeft = new Mesh(true, WebGL.textureVertexMap, [1, 1, 1], false);
     let wfl = new Matrix();
+    wallLeft.textureIndex = 5;
     wfl.scale(2, 1, 50).turnZ(Math.PI/2).translate(-50, 0, 0);
     wallLeft.getMatrices().push(wfl);
     wallLeft.setData(flatMeshData);
 
     let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb = new Matrix();
-    mb.scale(1).translate(0, 0.5, -10);
+    mb.scale(0.5).translate(0, 0.5, -10);
     ball.getMatrices().push(mb);
     ball.setData(cubeMeshData);
     // HAVE to hardcode texture indices and assign them using if-else in the shader
     ball.addTexture(webglContext, 'blockcomplete.png', 'blockcomplete.png', 2, 3);
-    let ballGrabable = new Grabable2(0, 0.5, -10, 2, 2, 2);
+    webglContext.addTexture('tnt.png', 4);
+    let ballGrabable = new Grabable2(0, 0.5, -10, 1, 1, 1);
     ballGrabable.addMesh(ball);
 
     let ball2 = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
     let mb2 = new Matrix();
-    mb2.scale(1).translate(0, 1, -13);
+    mb2.scale(0.5).translate(0, 1, -13);
     ball2.getMatrices().push(mb2);
     ball2.setData(cubeMeshData);
     // HAVE to hardcode texture indices and assign them using if-else in the shader
-    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
-    let ballGrabable2 = new Grabable2(0, 1, -13, 2, 2, 2);
+    let ballGrabable2 = new Grabable2(0, 1, -13, 1, 1, 1);
     ballGrabable2.addMesh(ball2);
 
     this.objects.push(floor);
@@ -162,7 +168,6 @@ class World {
     ball.setData(cubeMeshData);
 
     // HAVE to hardcode texture indices and assign them using if-else in the shader
-    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
     let ballGrabable2 = new Grabable2(objectData.pos.x, objectData.pos.y, objectData.pos.z, 1, 1, 1);
     ballGrabable2.addMesh(ball);
     this.grabables.push(ballGrabable2);
@@ -170,7 +175,11 @@ class World {
 
   addObject() {
     let cubeMeshData = new Float32Array(Shape.cube());
-    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, 2, -1);
+    let textureIndex = 2;
+    if (this.player.currentBlockSelection == 1) {
+      textureIndex = 4;
+    }
+    let ball = new Mesh(false, WebGL.textureVertexMap, [1, 1, 1], false, textureIndex, -1);
     let mb2 = new Matrix();
     mb2.scale(0.5);
     mb2.translate(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 + this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw));
@@ -178,12 +187,9 @@ class World {
     ball.setData(cubeMeshData);
 
     // HAVE to hardcode texture indices and assign them using if-else in the shader
-    // ball.addTexture(webglContext, 'polygons_color.png', 'polygons_bumps.png', 0);
     let ballGrabable2 = new Grabable2(this.player.pos.x + 2 * Math.sin(this.player.yaw), Math.max(this.player.box.ly / 2 + this.player.pos.y - 2 * Math.sin(this.player.pitch), 0.5), this.player.pos.z - 2 * Math.cos(this.player.yaw), 1, 1, 1);
     ballGrabable2.addMesh(ball);
     this.grabables.push(ballGrabable2);
-
-    let pos = mb2.get().slice(12, 15);
 
     this.playerWebrtc.transmitObjectState(ballGrabable2);
   }

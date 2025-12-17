@@ -23,6 +23,7 @@ class WebRTC {
   // ArrayBuffer length
   //  10 for alphanumeric UID
   //  4 bytes each for x, y, z coordinates
+  // Plyaer buffers have 4 bytes extra for pitch and yaw each
   static playerBufferLength = 30;
   static objectBufferLength = 22;
 
@@ -94,6 +95,10 @@ class WebRTC {
       "ObjectChannel": currPc.pc.createDataChannel("ObjectChannel", {
         ordered: false,
         maxRetransmits: 0
+      }),
+      "HitChannel": currPc.pc.createDataChannel("HitChannel", {
+        ordered: true,
+        maxRetransmits: 2
       })
     };
 
@@ -109,6 +114,10 @@ class WebRTC {
 
         case "ObjectChannel":
           channel.onmessage = event => this.receiveObjectState(event);
+          break;
+
+        case "HitChannel":
+          channel.onmessage = event => this.registerHit(event);
           break;
 
         default:
@@ -201,6 +210,21 @@ class WebRTC {
     }
   }
 
+  transmitPlayerHit(peerId) {
+    let channel = this.peerConnections[peerId].outDataChannels["HitChannel"];
+    console.log("Sending hit to " + peerId);
+    if (channel.readyState === "open") {
+      console.log("Channel was open");
+      channel.send(this.encodeHitData(peerId));
+    }
+  }
+
+  registerHit(event) {
+    console.log("Received hit");
+    let hitTaken = this.decodeHitData(event.data);
+    this.world.player.takeHit(hitTaken);
+  }
+
   receivePlayerState(event) {
     let playerData = this.decodePlayerData(event.data);
     this.world.updatePeerPlayers(playerData);
@@ -242,11 +266,25 @@ class WebRTC {
     return {playerId: playerId, pos: pos};
   }
 
-  encodeObjectData(object) {
+  encodeHitData(peerId) {
+    let buffer = new ArrayBuffer(14);
+    let uidView = new Uint8Array(buffer, 4, 10);
+    let deltaHit = new Float32Array(buffer, 0, 1);
 
+    for (let i = 0; i < 10; i++) {
+        uidView[i] = peerId.charCodeAt(i);
+      }
+
+    deltaHit = 10;
   }
 
-  decodeObjectData(buffer) {
+  decodeHitData(buffer) {
+    let uidView = new Uint8Array(buffer, 4, 10);
+    let deltaHit = new Float32Array(buffer, 0, 1);
 
+    let playerId = String.fromCharCode(... uidView);
+    let deltaHealth = deltaHit[0];
+
+    return deltaHealth;
   }
 }

@@ -26,6 +26,10 @@ class Player2 extends WorldObject {
   isUncrouching;
   uncrouchStartTime;
 
+  blockSelection;
+
+  audio;
+
   constructor(document, canvas, world, isPrimaryPlayer = true, x, z) { 
     super(x, 0.5, z, 1, 1, 1);
     this.world = world;
@@ -62,6 +66,15 @@ class Player2 extends WorldObject {
     this.isUncrouching = false;
     this.uncrouchStartTime = 0;
 
+    this.blockOptions = [createTextMesh("Grass").data, createTextMesh("TNT").data];
+    this.blockColors = [[0., 1., 0., 1.], [1., .7, 0., 1.]];
+
+    this.currentBlockSelection = 0;
+
+    this.helpMenuOn = false;
+
+    this.loadAudio();
+
     this.initEvents(document, canvas, this.isPrimaryPlayer);
   }
 
@@ -86,6 +99,15 @@ class Player2 extends WorldObject {
 
   update(dt) {
     let multiplier = 1;
+
+    // audio
+    if ((this.dirX == 0 && this.dirZ == 0) || !this.isGrounded) {
+      // stop walking audio
+      this.stopWalkingAudio();
+    } else {
+      // start walking audio
+      this.playWalkingAudio(this.sprintMutliplier);
+    }
 
     // If running along diagonal, the speed is in the direction of the run
     // which means that the components in local z and x will be at 45 degs with
@@ -145,6 +167,7 @@ class Player2 extends WorldObject {
         this.health -= 2 * Math.abs(this.vel.vy);
         this.health = Math.floor(this.health);
         this.updateHealthMesh();
+        this.playAudio("oof");
       }
       this.isGrounded = true;
       this.vel.vy = 0;
@@ -240,6 +263,24 @@ class Player2 extends WorldObject {
     this.addMesh(leftHand);
     this.addMesh(rightHand);
 
+    if (!isPrimary) {
+      // only top display indicating health
+      let hudLeft = new Mesh(true, WebGL.textureVertexMap, [1., 1., 1., 0.4], false);
+      let hudLeftM = new Matrix();
+      hudLeft.setData(new Float32Array(Shape.flat(10, 10)));
+      hudLeftM.scale(0.1, 1, 0.1).turnX(Math.PI/2).translate(0, 1.2, 0);
+      hudLeft.getMatrices().push(hudLeftM);
+
+      let hudTextMesh = new Mesh(true, WebGL.defaultVertexMap, [0., 1., 0., 1.], false);
+      let hudTextMatrix = new Matrix();
+      hudTextMesh.setData(createTextMesh("Health\n\t"+this.health, 0.005).data);
+      hudTextMatrix.scale(1.8).translate(-0.1, 0.05, 0.001).turnY(Math.PI).translate(0, 1.2, 0);
+      hudTextMesh.getMatrices().push(hudTextMatrix);
+
+      this.addMesh(hudLeft);
+      this.addMesh(hudTextMesh);
+    }
+
     if (isPrimary) {
       // init HUD
       let hudLeft = new Mesh(true, WebGL.textureVertexMap, [1., 1., 1., 0.4], false);
@@ -256,24 +297,140 @@ class Player2 extends WorldObject {
 
       this.addMesh(hudLeft);
       this.addMesh(hudTextMesh);
-    }
 
-    for (let mesh of this.meshes) {
-      console.log(mesh);
+      let hudRight = new Mesh(true, WebGL.textureVertexMap, [1., 1., 1., 0.4], false);
+      let hudRightM = new Matrix();
+      hudRight.setData(new Float32Array(Shape.flat(10, 10)));
+      hudRightM.scale(0.1, 1, 0.3).turnZ(Math.PI/2).turnY(Math.PI/6).translate(0.5, -0.3, -1.5);
+      hudRight.getMatrices().push(hudRightM);
+
+      let hudTextRightMesh = new Mesh(true, WebGL.defaultVertexMap, [0., 1., 0., 1.], false);
+      let hudTextRightMatrix = new Matrix();
+      hudTextRightMesh.setData(this.blockOptions[this.currentBlockSelection]);
+      hudTextRightMatrix.scale(2).turnY(-Math.PI/3).translate(0.3, -0.15, -1.2);
+      hudTextRightMesh.getMatrices().push(hudTextRightMatrix);
+
+      this.addMesh(hudRight);
+      this.addMesh(hudTextRightMesh);
+
+      let hudHelp = new Mesh(true, WebGL.textureVertexMap, [1., 1., 1., 0.], false);
+      let hudHelpM = new Matrix();
+      hudHelp.setData(new Float32Array(Shape.flat(10, 10)));
+      hudHelpM.scale(0.7).turnX(Math.PI/2).translate(0, 0, -3);
+      hudHelp.getMatrices().push(hudHelpM);
+
+      let hudHelpTextMesh = new Mesh(true, WebGL.defaultVertexMap, [0., 0., 0., 0.], false);
+      let hudHelpTextMatrix = new Matrix();
+      hudHelpTextMesh.setData(createTextMesh(helpMenuText).data);
+      hudHelpTextMatrix.scale(0.5).translate(-0.2, 0.2, -1);
+      hudHelpTextMesh.getMatrices().push(hudHelpTextMatrix);
+
+      this.addMesh(hudHelp);
+      this.addMesh(hudHelpTextMesh);
     }
   }
 
+  loadAudio() {
+    this.audio = {
+      "walk": {
+        audio: new Audio('/audio/walking.mp3'),
+        isOn: false
+      },
+      "oof": {
+        audio: new Audio('/audio/oof.mp3'),
+        isOn: false
+      },
+      "punch": {
+        audio: new Audio('/audio/punch.mp3'),
+        isOn: false
+      },
+      "jump": {
+        audio: new Audio('/audio/jump.mp3'),
+        isOn: false
+      }
+    };
+
+    this.audio["walk"].audio.loop = true;
+  }
+
+  playWalkingAudio(speed) {
+    this.audio["walk"].audio.playbackRate = speed;
+    if (!this.audio["walk"].isOn) {
+      this.audio["walk"].audio.currentTime = 0;
+      this.audio["walk"].audio.play();
+      this.audio["walk"].isOn = true;
+    }
+  }
+
+  stopWalkingAudio() {
+    if (this.audio["walk"].isOn) {
+      this.audio["walk"].audio.pause();
+      this.audio["walk"].isOn = false;
+    }
+  }
+
+  playAudio(soundType) {
+    this.audio[soundType].audio.play();
+  }
+
+  detectPunch() {
+    for (let key in this.world.peerPlayers) {
+      let player = this.world.peerPlayers[key];
+
+      let oppPos = [player.pos.x, player.pos.y, player.pos.z];
+      let myPos = [this.pos.x, this.pos.y, this.pos.z];
+
+      let toOppVec = subtract(oppPos, myPos);
+      let myDir = [Math.sin(this.yaw), 0, -Math.cos(this.yaw)];
+    
+      if (dot(normalize(toOppVec), myDir) > 0.9 && norm(toOppVec) <= 2) {
+        this.playAudio("punch");
+        player.health -= 10;
+        player.updateHealthMesh();
+        this.world.playerWebrtc.transmitPlayerHit(key);
+      }
+    }
+  }
+
+  takeHit(delta) {
+    this.health -= 10;
+    this.playAudio("oof");
+    this.updateHealthMesh();
+  }
+
   updateHealthMesh() {
-    this.meshes[3].setData(createTextMesh("Health\n\t"+this.health).data);
-    let color = [0., 1., 0., 1.];
-    if (this.health < 80 && this.health >= 60) {
+    let healthMesh;
+    if (this.isPrimaryPlayer) {
+      healthMesh = this.meshes[3];
+    } else {
+      healthMesh = this.meshes[6];
+    }
+    healthMesh.setData(createTextMesh("Health\n\t"+this.health, 0.005).data);
+    let color;
+    if (this.health >= 80) {
+      color = [0., 1., 0., 1.];
+    }else if (this.health < 80 && this.health >= 60) {
       color = [1., 1., 0., 1.];
     } else if (this.health < 60 && this.health >= 30) {
       color = [1., 0.65, 0, 1.];      
     } else {
       color = [1., 0., 0., 1.];
     }
-    this.meshes[3].color = color;
+    healthMesh.color = color;
+  }
+
+  updateBlockDisplayMesh() {
+    if (this.isPrimaryPlayer) {
+      this.meshes[5].setData(this.blockOptions[this.currentBlockSelection]);
+      this.meshes[5].color = this.blockColors[this.currentBlockSelection];
+    }
+  }
+
+  updateHelpMenuMesh() {
+    if (this.isPrimaryPlayer) {
+      this.meshes[6].color[3] = this.helpMenuOn ? 0.5 : 0;
+      this.meshes[7].color[3] = this.helpMenuOn ? 1 : 0;
+    } 
   }
 
   updateHands() {
@@ -331,6 +488,12 @@ class Player2 extends WorldObject {
         case 'a':
           this.dirX = -1;
           break;
+        case 'h':
+          if (!this.helpMenuOn) {
+            this.helpMenuOn = true;
+            this.updateHelpMenuMesh();
+          }
+          break;
         case 'e':
           if (!this.isActionKey) {
             this.isActionKey = true;
@@ -342,6 +505,7 @@ class Player2 extends WorldObject {
           break;
         case ' ':
           if (this.isGrounded && !this.isCrouching && !this.isUncrouching) {
+            this.audio["jump"].audio.play();
             this.vel.vy = this.jumpSpeed;
             this.isGrounded = false;
           }
@@ -382,6 +546,10 @@ class Player2 extends WorldObject {
           this.isUncrouching = true;
           this.uncrouchStartTime = performance.now();
           break;
+        case 'h':
+          this.helpMenuOn = false;
+          this.updateHelpMenuMesh();
+          break;
         default:
           console.log("Unknown command");
           break;
@@ -399,5 +567,21 @@ class Player2 extends WorldObject {
     canvas.addEventListener('click', async() => {
       await canvas.requestPointerLock();
     });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+
+      if (e.deltaY > 0) {
+        this.currentBlockSelection = (this.currentBlockSelection + 1) % this.blockOptions.length;
+      } else {
+        this.currentBlockSelection = (this.currentBlockSelection - 1 + this.blockOptions.length) % this.blockOptions.length;
+      }
+
+      this.updateBlockDisplayMesh();
+    }, {passive: false});
+
+    canvas.addEventListener('mousedown', e => {
+      this.detectPunch();
+    })
   }
 }

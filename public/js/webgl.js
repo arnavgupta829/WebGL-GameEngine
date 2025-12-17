@@ -64,8 +64,7 @@ class WebGL {
   }
 
   drawObj(data, isTriangleStrip, matrix, matrixMovement, color, textureIndex, bumpMapIndex, isImplicitSurface) {
-    // this.gl.depthFunc(this.gl.LESS);
-    this.setUniform('1iv', 'uSampler', [0, 1, 2, 3]);
+    this.setUniform('1iv', 'uSampler', [0, 1, 2, 3, 4, 5]);
     this.setUniform('Matrix4fv', 'uMF', false, matrix);    
     this.setUniform('Matrix4fv', 'uMV', false, matrixMovement);    
     this.setUniform('Matrix4fv', 'uMI', false, Matrix.inverse(matrix));
@@ -85,7 +84,6 @@ class WebGL {
   }
 
   drawSkyBox(data, viewMatrixInverse) {
-    // this.gl.depthFunc(this.gl.LEQUAL);
     this.gl.useProgram(this.skyboxProgram);
     this.mapVertex(WebGL.skyboxVertexMap, this.skyboxProgram);
     this.setSkyboxUniform('1i', 'uSkybox', 0);
@@ -128,6 +126,7 @@ class WebGL {
     let img = new Image();
 
     img.onload = () => {
+      console.log(imgSrc, index);
       this.gl.activeTexture(this.gl.TEXTURE0 + index);
 
       this.gl.bindTexture(this.gl.TEXTURE_2D,
@@ -149,6 +148,10 @@ class WebGL {
                         this.gl.LINEAR_MIPMAP_NEAREST);
 
       this.gl.generateMipmap(this.gl.TEXTURE_2D);
+    }
+
+    img.onerror = () => {
+      console.log("Error loading " + imgSrc);
     }
 
     img.src = '/textures/' + imgSrc;

@@ -72,7 +72,7 @@ let Shader = {
     in vec3 vPos, vNor, vTan;
     in vec2 vUV;
     out vec4 fragColor;
-    uniform vec3 uColor;
+    uniform vec4 uColor;
     uniform int textureIndex;
     uniform int bumpMapIndex;
     uniform sampler2D uSampler[10];
@@ -111,8 +111,8 @@ let Shader = {
       float diffuse = .1 + max(0., d) + .5 * max(0.,-d);
       float specular = pow(max(0., r),20.) + .5 * pow(max(0.,-r),20.);
 
-      vec3 color = uColor * diffuse + specular;
-      fragColor = vec4(sqrt(color) * T.rgb, 1.);
+      vec3 color = uColor.xyz * diffuse + specular;
+      fragColor = vec4(sqrt(color) * T.rgb, uColor.w);
       }
     `,
 }

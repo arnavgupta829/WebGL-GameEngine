@@ -15,6 +15,7 @@ class WorldObject {
     this.pos.x = x ?? 0;
     this.pos.y = y ?? 0;
     this.pos.z = z ?? 0;
+    this.pos.theta = 0;
 
     this.box.lx = lx;
     this.box.ly = ly;
@@ -41,7 +42,7 @@ class WorldObject {
 
   updateMeshPos() {
     for (let mesh of this.meshes) {
-      mesh.getPositionMatrix().reset().translate(this.pos.x, this.pos.y, this.pos.z);
+      mesh.getPositionMatrix().reset().turnY(-this.pos.theta).translate(this.pos.x, this.pos.y, this.pos.z);
     }
   }
 

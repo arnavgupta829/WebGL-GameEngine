@@ -128,9 +128,13 @@ class World {
       this.peerPlayers[playerId].drawObject(webglContext, this.mView.getWorldMatrix());
     }
 
-    webglContext.drawSkyBox(this.skyboxCube, Matrix.inverse(this.mView.getWorldMatrix()));
+    let skyboxViewMatrix = new Matrix();
+    skyboxViewMatrix.turnY(this.player.yaw);
+    skyboxViewMatrix.turnX(this.player.pitch);
 
-        webglContext.toggleDepthTest(false);
+    webglContext.drawSkyBox(this.skyboxCube, Matrix.inverse(skyboxViewMatrix.getWorldMatrix()));
+
+    webglContext.toggleDepthTest(false);
     this.player.drawObject(webglContext, new Matrix().getWorldMatrix());
     webglContext.toggleDepthTest(true);
   }
@@ -143,6 +147,8 @@ class World {
     this.peerPlayers[playerData.playerId].pos.x = playerData.pos.x;
     this.peerPlayers[playerData.playerId].pos.y = playerData.pos.y;
     this.peerPlayers[playerData.playerId].pos.z = playerData.pos.z;
+    this.peerPlayers[playerData.playerId].pos.z = playerData.pos.z;
+    this.peerPlayers[playerData.playerId].pos.theta = playerData.pos.yaw;
     this.peerPlayers[playerData.playerId].updateMeshPos();
   }
 

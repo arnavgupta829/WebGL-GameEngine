@@ -23,7 +23,8 @@ class WebRTC {
   // ArrayBuffer length
   //  10 for alphanumeric UID
   //  4 bytes each for x, y, z coordinates
-  static arrayBufferLength = 30;
+  static playerBufferLength = 30;
+  static objectBufferLength = 22;
 
   constructor(userId, world) {
     this.userId = userId;
@@ -211,7 +212,7 @@ class WebRTC {
   }
 
   encodePlayerData(player, isPlayer = true) {
-    let buffer = new ArrayBuffer(WebRTC.arrayBufferLength);
+    let buffer = new ArrayBuffer(WebRTC.playerBufferLength);
 
     let uidView = new Uint8Array(buffer, 20, 10);
     let positionView = new Float32Array(buffer, 0, 5);
@@ -239,5 +240,13 @@ class WebRTC {
     let pos = {x: positionView[0], y: positionView[1], z: positionView[2], pitch: positionView[3], yaw: positionView[4]};
 
     return {playerId: playerId, pos: pos};
+  }
+
+  encodeObjectData(object) {
+
+  }
+
+  decodeObjectData(buffer) {
+
   }
 }

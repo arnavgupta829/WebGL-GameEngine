@@ -4,6 +4,8 @@ class Player2 extends WorldObject {
 
   isPlayerReady;
 
+  health;
+
   cameraMatrix;
 
   yaw;
@@ -33,6 +35,9 @@ class Player2 extends WorldObject {
     this.playerId = createID();
 
     this.cameraMatrix = new Matrix();
+
+    // health prototype
+    this.health = 100;
 
     this.isGrounded = true;
 
@@ -136,6 +141,11 @@ class Player2 extends WorldObject {
     }
     
     if (foundTopCollision) {
+      if (this.vel.vy < -10) {
+        this.health -= 2 * Math.abs(this.vel.vy);
+        this.health = Math.floor(this.health);
+        this.updateHealthMesh();
+      }
       this.isGrounded = true;
       this.vel.vy = 0;
     } else {
@@ -179,6 +189,8 @@ class Player2 extends WorldObject {
     rightHand.setData(handData);
     leftHand.setData(handData);
 
+
+  
     // the hand is an implicit surface made up of 18 blobs. one transformation matrix for each
     for (let i = 0; i < 18; i++) {
       if (isPrimary) {
@@ -213,20 +225,55 @@ class Player2 extends WorldObject {
       let legLeft = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false, -1, -1);
       legLeft.setData(new Float32Array(Shape.tube(10)));
       let leftLegMatrix = new Matrix();
-      leftLegMatrix.scale(0.1, 0.1, 0.4).turnX(Math.PI/2).translate(-0.1, 0, 0);
+      leftLegMatrix.scale(0.05, 0.05, 0.4).turnX(Math.PI/2).translate(-0.1, 0, 0);
       legLeft.getMatrices().push(leftLegMatrix);
       this.addMesh(legLeft);
 
       let legRight = new Mesh(true, WebGL.textureVertexMap, [1, 1, 0], false, -1, -1);
       legRight.setData(new Float32Array(Shape.tube(10)));
       let legRightMatrix = new Matrix();
-      legRightMatrix.scale(0.1, 0.1, 0.4).turnX(Math.PI/2).translate(0.1, 0, 0);
+      legRightMatrix.scale(0.05, 0.05, 0.4).turnX(Math.PI/2).translate(0.1, 0, 0);
       legRight.getMatrices().push(legRightMatrix);
       this.addMesh(legRight);
     }
 
     this.addMesh(leftHand);
     this.addMesh(rightHand);
+
+    if (isPrimary) {
+      // init HUD
+      let hudLeft = new Mesh(true, WebGL.textureVertexMap, [1., 1., 1., 0.4], false);
+      let hudLeftM = new Matrix();
+      hudLeft.setData(new Float32Array(Shape.flat(10, 10)));
+      hudLeftM.scale(0.1, 1, 0.3).turnZ(Math.PI/2).turnY(-Math.PI/6).translate(-0.5, -0.3, -1.5);
+      hudLeft.getMatrices().push(hudLeftM);
+
+      let hudTextMesh = new Mesh(true, WebGL.defaultVertexMap, [0., 1., 0., 1.], false);
+      let hudTextMatrix = new Matrix();
+      hudTextMesh.setData(createTextMesh("Health\n\t"+this.health).data);
+      hudTextMatrix.turnY(Math.PI/3).translate(-0.3, -0.15, -0.85);
+      hudTextMesh.getMatrices().push(hudTextMatrix);
+
+      this.addMesh(hudLeft);
+      this.addMesh(hudTextMesh);
+    }
+
+    for (let mesh of this.meshes) {
+      console.log(mesh);
+    }
+  }
+
+  updateHealthMesh() {
+    this.meshes[3].setData(createTextMesh("Health\n\t"+this.health).data);
+    let color = [0., 1., 0., 1.];
+    if (this.health < 80 && this.health >= 60) {
+      color = [1., 1., 0., 1.];
+    } else if (this.health < 60 && this.health >= 30) {
+      color = [1., 0.65, 0, 1.];      
+    } else {
+      color = [1., 0., 0., 1.];
+    }
+    this.meshes[3].color = color;
   }
 
   updateHands() {

@@ -47,6 +47,8 @@ class WebGL {
 
     this.gl.enable(this.gl.DEPTH_TEST);
     this.gl.depthFunc(this.gl.LEQUAL);
+    this.gl.enable(this.gl.BLEND);
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
     this.gl.useProgram(this.program);
 
@@ -73,7 +75,10 @@ class WebGL {
       this.setUniform('Matrix4fv', 'uMI', false, Matrix.inverse(matrix));  
     }
     this.setUniform('1i', 'isImplicitSurface', isImplicitSurface);
-    this.setUniform('3fv', 'uColor', color ?? [1, 1, 1]);
+    if (color.length == 3) {
+      color.push(1.);
+    }
+    this.setUniform('4fv', 'uColor', color ?? [1, 1, 1, 1]);
     this.setUniform('1i', 'textureIndex', textureIndex);
     this.setUniform('1i', 'bumpMapIndex', bumpMapIndex);
     this.drawMesh(data, isTriangleStrip);
@@ -159,33 +164,27 @@ class WebGL {
     let faces = [
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_X,
-        url: "/textures/resized_skyboxside1.png"
-        // url: "/textures/blockcomplete.png"
+        url: "/textures/posx.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
-        url: "/textures/resized_skyboxside1.png"
-        // url: "/textures/blockcomplete.png"
+        url: "/textures/negx.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
-        url: "/textures/resized_skyboxtop.png"
-        // url: "/textures/blockcomplete.png"
+        url: "/textures/posy.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        url: "/textures/resized_skyboxbottom.png"
-        // url: "/textures/blockcomplete.png"
+        url: "/textures/negy.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
-        url: "/textures/resized_skyboxside1.png"
-        // url: "/textures/blockcomplete.png"
+        url: "/textures/posz.png"
       },
       { 
         target: this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-        url: "/textures/resized_skyboxside1.png"
-        // url: "/textures/skyboxside4.png"
+        url: "/textures/negz.png"
       }
     ];
 
